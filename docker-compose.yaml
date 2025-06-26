@@ -1,0 +1,74 @@
+# nginx proxy address - http://172.17.0.1:59091
+
+name: ntfy
+x-logging: &default-logging
+  options:
+    max-size: '5m'
+    max-file: '1'
+  driver: json-file
+
+services:
+  app:
+    image: binwiederhier/ntfy:latest
+    container_name: ntfy-app
+    hostname: ${BASE_HOST_NAME:-$HOSTNAME}
+    restart: always
+    pull_policy: always
+    command: serve
+    logging: *default-logging
+    environment:
+      TZ: ${TZ:-America/New_York}
+      NTFY_UPSTREAM_BASE_URL: https://ntfy.sh
+      NTFY_BASE_URL: https://${BASE_HOST_NAME:-$HOSTNAME}
+      NTFY_AUTH_FILE: /var/lib/ntfy/db/auth.db
+      NTFY_AUTH_DEFAULT_ACCESS: deny-all
+      NTFY_BEHIND_PROXY: true
+      NTFY_ENABLE_LOGIN: true
+      NTFY_ENABLE_SIGNUP: true
+      NTFY_ENABLE_LOGOUT: true
+      NTFY_ENABLE_RESET_PASSWORD: true
+      NTFY_ENABLE_CHANGE_NAME: true
+      NTFY_ENABLE_CHANGE_EMAIL: true
+      NTFY_ENABLE_CHANGE_AVATAR: true
+      NTFY_ENABLE_CHANGE_PASSWORD: true
+      NTFY_ENABLE_CHANGE_LOCATION: true
+      NTFY_ENABLE_CHANGE_LANGUAGE: true
+      NTFY_ENABLE_CHANGE_TIMEZONE: true
+      NTFY_ENABLE_CHANGE_BACKGROUND: true
+      NTFY_ENABLE_CHANGE_DESCRIPTION: true
+      NTFY_ENABLE_CHANGE_NOTIFICATIONS: true
+      NTFY_ENABLE_CHANGE_SMS_VERIFICATION: true
+      NTFY_ENABLE_CHANGE_SMS_NOTIFICATIONS: true
+      NTFY_ENABLE_CHANGE_PUSH_VERIFICATION: true
+      NTFY_ENABLE_CHANGE_PUSH_NOTIFICATIONS: true
+      NTFY_ENABLE_CHANGE_VOICE_VERIFICATION: true
+      NTFY_ENABLE_CHANGE_VOICE_NOTIFICATIONS: true
+      NTFY_ENABLE_CHANGE_EMAIL_NOTIFICATIONS: true
+      NTFY_VISITOR_SMS_LIMIT: -1
+      NTFY_VISITOR_EMAILS_LIMIT: -1
+      NTFY_VISITOR_CALLS_LIMIT: -1
+      NTFY_VISITOR_RESERVATIONS_LIMIT: -1
+      NTFY_VISITOR_AUTH_LIMITER_LIMIT: -1
+      NTFY_SMTP_SENDER_USER: ${EMAIL_SERVER_LOGIN_NAME:-}
+      NTFY_SMTP_SENDER_PASS: ${EMAIL_SERVER_LOGIN_PASS:-}
+      NTFY_SMTP_SENDER_ADDR: ${EMAIL_SERVER_HOST:-localhost}:${EMAIL_SERVER_PORT:-25}
+      NTFY_SMTP_SENDER_FROM: ${EMAIL_SERVER_MAIL_FROM:-no-reply@${BASE_HOST_NAME:-$HOSTNAME}}
+    ports:
+      - '172.17.0.1:59091:80'
+    volumes:
+      - './rootfs/db:/var/lib/ntfy/db'
+      - './rootfs/config/ntfy:/etc/ntfy'
+      - './rootfs/data/ntfy:/var/cache/ntfy'
+    healthcheck:
+      test: ['CMD-SHELL', "wget -q --tries=1 http://localhost:80/v1/health -O - | grep -Eo '\"healthy\"\\s*:\\s*true' || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 600s
+    networks:
+      - ntfy
+
+networks:
+  ntfy:
+    name: ntfy
+    external: false
