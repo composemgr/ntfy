@@ -41,8 +41,8 @@ BASE_DOMAIN_NAME=
 
 ## 📂 Volumes
 
-- `./rootfs/config/ntfy` - Configuration files
-- `./rootfs/data/ntfy` - Application data
+- `./volumes/config/ntfy` - Configuration files
+- `./volumes/data/ntfy` - Application data
 
 ## 🔐 Security
 
