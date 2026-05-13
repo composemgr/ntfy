@@ -18,6 +18,8 @@ services:
     logging: *default-logging
     environment:
       TZ: ${TZ:-America/New_York}
+      CONTAINER_NAME: ntfy-app
+      HOSTNAME: ${BASE_HOST_NAME:-$HOSTNAME}
       NTFY_UPSTREAM_BASE_URL: https://ntfy.sh
       NTFY_BASE_URL: https://${BASE_HOST_NAME:-$HOSTNAME}
       NTFY_AUTH_FILE: /var/lib/ntfy/db/auth.db
@@ -25,8 +27,8 @@ services:
       NTFY_BEHIND_PROXY: true
       NTFY_ENABLE_LOGIN: true
       NTFY_ENABLE_SIGNUP: false
-      NTFY_SMTP_SENDER_USER: ${EMAIL_SERVER_USER:-}
-      NTFY_SMTP_SENDER_PASS: ${EMAIL_SERVER_PASS:-}
+      NTFY_SMTP_SENDER_USER: ${EMAIL_SERVER_LOGIN_NAME:-}
+      NTFY_SMTP_SENDER_PASS: ${EMAIL_SERVER_LOGIN_PASS:-}
       NTFY_SMTP_SENDER_ADDR: ${EMAIL_SERVER_HOST:-172.17.0.1}:${EMAIL_SERVER_PORT:-587}
       NTFY_SMTP_SENDER_FROM: ${EMAIL_SERVER_MAIL_FROM:-no-reply@example.com}
     ports:
@@ -43,8 +45,30 @@ services:
       start_period: 600s
     networks:
       - ntfy
+      - proxy
+      - cloudflare
+    labels:
+      - 'traefik.enable=true'
+      - 'cloudflare.enable=true'
+      - 'traefik.docker.network=proxy'
+      - 'cloudflare.service=http://ntfy-app:80'
+      - 'cloudflare.hostname=ntfy.${CLOUDFLARE_ZONE_NAME:-}'
+      - 'traefik.http.routers.ntfy-app.entrypoints=http'
+      - 'traefik.http.routers.ntfy-app-secure.tls=true'
+      - 'traefik.http.routers.ntfy-app.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
+      - 'traefik.http.middlewares.ntfy-app-https-redirect.redirectscheme.scheme=https'
+      - 'traefik.http.routers.ntfy-app.middlewares=ntfy-app-https-redirect'
+      - 'traefik.http.routers.ntfy-app-secure.entrypoints=https'
+      - 'traefik.http.routers.ntfy-app-secure.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
+      - 'traefik.http.routers.ntfy-app-secure.tls.certresolver=cloudflare'
+      - 'traefik.http.routers.ntfy-app-secure.service=ntfy-app'
+      - 'traefik.http.services.ntfy-app.loadbalancer.server.port=80'
 
 networks:
   ntfy:
     name: ntfy
     external: false
+  proxy:
+    external: true
+  cloudflare:
+    external: true
